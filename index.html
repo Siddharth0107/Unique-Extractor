@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Get Unique List</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- xlsx lib for Excel reading -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+
+<body
+    class="min-h-screen bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+    <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-md w-full text-center">
+        <h2 class="text-3xl font-bold mb-6 text-gray-800"><i class="fa-solid fa-cloud-arrow-up"></i> Upload CSV or Excel File</h2>
+
+        <label for="fileInput"
+            class="cursor-pointer inline-block bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg mb-4 w-full transition duration-200">
+            <i class="fa-solid fa-folder"></i> Choose File
+        </label>
+        <input type="file" id="fileInput" accept=".csv, .xlsx" class="hidden" />
+
+        <button onclick="processFile()"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg w-full transition duration-200">
+            <i class="fa-solid fa-download"></i> Download the file
+        </button>
+
+        <a id="downloadLink" style="display:none;" download="unique_emails.txt"
+            class="mt-6 inline-block text-blue-700 font-medium hover:underline">📄 Download unique_emails.txt</a>
+    </div>
+
+
+    <script src="https://kit.fontawesome.com/a93ce3b21d.js" crossorigin="anonymous"></script>
+    <script>
+        function extractEmails(text) {
+            const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+            return text.match(emailRegex) || [];
+        }
+
+        function processCSV(content) {
+            const emails = extractEmails(content);
+            generateOutput(emails);
+        }
+
+        function processXLSX(arrayBuffer) {
+            const workbook = XLSX.read(arrayBuffer, { type: "array" });
+            let emails = [];
+
+            workbook.SheetNames.forEach(sheetName => {
+                const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+                sheet.forEach(row => {
+                    row.forEach(cell => {
+                        if (typeof cell === 'string') {
+                            emails.push(...extractEmails(cell));
+                        }
+                    });
+                });
+            });
+
+            generateOutput(emails);
+        }
+
+        function generateOutput(emails) {
+            const uniqueEmails = [...new Set(emails)];
+            const lines = uniqueEmails.map((email, index) => `${index + 1}) ${email}`);
+            const finalText = lines.join('\n');
+            downloadTextFile(finalText);
+        }
+
+        function downloadTextFile(text) {
+            const blob = new Blob([text], { type: "text/plain" });
+            const link = document.getElementById("downloadLink");
+            link.href = URL.createObjectURL(blob);
+            link.style.display = "inline";
+        }
+
+        function processFile() {
+            const file = document.getElementById("fileInput").files[0];
+            if (!file) return alert("Please select a file.");
+
+            const reader = new FileReader();
+
+            if (file.name.endsWith(".csv")) {
+                reader.onload = e => processCSV(e.target.result);
+                reader.readAsText(file);
+            } else if (file.name.endsWith(".xlsx")) {
+                reader.onload = e => processXLSX(e.target.result);
+                reader.readAsArrayBuffer(file);
+            } else {
+                alert("❌ Only .csv or .xlsx files are supported.");
+            }
+        }
+    </script>
+</body>
+
+</html>
